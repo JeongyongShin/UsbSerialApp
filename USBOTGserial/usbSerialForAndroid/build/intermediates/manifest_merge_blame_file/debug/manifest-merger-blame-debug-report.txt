@@ -4,8 +4,8 @@
 4
 5    <uses-sdk
 6        android:minSdkVersion="17"
-6-->C:\Users\Owner\AndroidStudioProjects\USBOTGserial\usbSerialForAndroid\src\main\AndroidManifest.xml
+6-->D:\git\UsbSerialApp\USBOTGserial\usbSerialForAndroid\src\main\AndroidManifest.xml
 7        android:targetSdkVersion="30" />
-7-->C:\Users\Owner\AndroidStudioProjects\USBOTGserial\usbSerialForAndroid\src\main\AndroidManifest.xml
+7-->D:\git\UsbSerialApp\USBOTGserial\usbSerialForAndroid\src\main\AndroidManifest.xml
 8
 9</manifest>

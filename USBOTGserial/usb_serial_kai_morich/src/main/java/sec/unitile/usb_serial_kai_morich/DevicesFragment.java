@@ -163,6 +163,7 @@ public class DevicesFragment extends ListFragment {
             Toast.makeText(getActivity(), "no driver", Toast.LENGTH_SHORT).show();
         } else {
             Bundle args = new Bundle();
+
             args.putInt("device", item.device.getDeviceId());
             args.putInt("port", item.port);
             args.putInt("baud", baudRate);
@@ -171,7 +172,7 @@ public class DevicesFragment extends ListFragment {
             fragment.setArguments(args);
             getFragmentManager().beginTransaction().replace(R.id.fragment, fragment, "terminal").addToBackStack(null).commit();
 
-            Log.i("App-Serial", "onListItemClick( )  device  : " + item.device.getDeviceId()+ ", port : " + item.port+ ", baud : " +baudRate);
+            Log.i("App-Serial", "onListItemClick( )  device  : " + item.device.getDeviceId()+ ", port : " + item.port+ ", baud : " +baudRate + ", position : " +position);
         }
     }
 
