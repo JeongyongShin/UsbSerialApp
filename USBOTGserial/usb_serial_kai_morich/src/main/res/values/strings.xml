@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">usb_serial_kai_morich</string>
+    <string name="devices">USB Devices</string>
+</resources>

@@ -1,0 +1,7 @@
+include ':usb_serial_giousa'
+include ':usb_serial_kai_morich'
+include ':usb_serial_mik3y'
+include ':usbSerialForAndroid'
+include ':usbSerialForAndroid'
+include ':app'
+rootProject.name = "USBOTGserial"

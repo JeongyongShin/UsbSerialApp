@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">usb_serial_mik3y</string>
+    <string name="devices">USB Devices</string>
+</resources>
