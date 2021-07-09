@@ -28,13 +28,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnDown.setOnClickListener(this);
 
         mUsbSerial = new UsbSerialService(this);
-        Log.i("App-Serial", "onCreate( ) @MainAcvity.java");
 
     }
 
     @Override
     public void onResume() {
-        Log.i("App-Serial", "onResume( ) ...   @MainAcvity.java " );
+        Log.i("Unitile-Serial", "onResume( ) ...   @MainAcvity.java " );
         super.onResume();
         mUsbSerial.init();
     }
@@ -42,7 +41,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onPause() {
         if(mUsbSerial.connected) {
-            Log.i("App-Serial", "onPause( ) ... --> disconnecte()  @MainAcvity.java    " );
+            Log.i("Unitile-Serial", "onPause( ) ... --> disconnecte()  @MainAcvity.java    " );
             mUsbSerial.disconnect();
         }
         this.unregisterReceiver(mUsbSerial.broadcastReceiver);
@@ -53,16 +52,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View v) {
         if(v == btnDown){
-            mUsbSerial.send( "y,30,100");
+            mUsbSerial.moveY(45);
         }
         else if(v == btnUp){
-            mUsbSerial.send( "y,0,100");
+            mUsbSerial.moveY(0);
         }
         else if(v == btnLeft){
-            mUsbSerial.send( "x,45,100");
+            mUsbSerial.moveX(30);
         }
         else if(v == btnRight){
-            mUsbSerial.send( "x,-45,100");
+            mUsbSerial.moveX(-30);
         }
     }
 }

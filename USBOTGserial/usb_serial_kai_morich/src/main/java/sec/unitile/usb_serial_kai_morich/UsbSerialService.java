@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import sec.unitile.usb_serial_kai_morich.util.HexDump;
 
 public class UsbSerialService  implements SerialInputOutputManager.Listener{
-
+    private static final String TAG = "Unitile-Serial";
     private enum UsbPermission { Unknown, Requested, Granted, Denied }
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     static class ListItem {
@@ -43,7 +43,7 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
     private Context mContext;
     private final ArrayList<ListItem> listItems = new ArrayList<>();
     private int baudRate = 115200;
-    private int deviceId, portNum;
+    private int venderId, deviceId, portNum;
     private boolean withIoManager = true;
     private UsbPermission usbPermission = UsbPermission.Unknown;
     private Handler mainLooper;
@@ -52,6 +52,12 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
     private SerialInputOutputManager usbIoManager;
     public boolean connected = false;
     private static final int WRITE_WAIT_MILLIS = 2000;
+    private final int MOTOR_DELAY = 10;
+
+    public  static int MIN_X = -150;
+    public  static int MAX_X = 150;
+    public  static int MIN_Y = -60;
+    public  static int MAX_Y = 120;
 
     public UsbSerialService(Context context){
         this.mContext = context;
@@ -60,7 +66,7 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
 
 
     void init() {
-        Log.i("App-Serial", "init( )  ");
+        Log.i(TAG, "init( )  ");
         mainLooper = new Handler(Looper.getMainLooper());
         UsbManager usbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
         UsbSerialProber usbDefaultProber = UsbSerialProber.getDefaultProber();
@@ -68,7 +74,7 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         listItems.clear();
         for(UsbDevice device : usbManager.getDeviceList().values()) {
             UsbSerialDriver driver = usbDefaultProber.probeDevice(device);
-            Log.i("App-Serial", "init( ) --> for loop...  --> driver  : " + driver);
+            Log.i(TAG, "init( ) --> for loop...  --> driver  : " + driver);
             if(driver == null) {
                 driver = usbCustomProber.probeDevice(device);
             }
@@ -83,8 +89,8 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         ListItem item = listItems.get(0);
         portNum = item.port;
         deviceId = item.device.getDeviceId();
-
-        Log.i("App-Serial", "init( ) --> final  --> Vendor id : "  +item.device.getVendorId()+ ", Product ID: " +item.device.getProductId() );
+        venderId = item.device.getVendorId();
+        Log.i(TAG, "init( ) --> final  --> Vendor id : "  +item.device.getVendorId()+ ", Product ID: " +item.device.getProductId()+ ", deviceId :" +deviceId);
 
         broadcastReceiver = new BroadcastReceiver() {
             @Override
@@ -107,14 +113,14 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         UsbDevice device = null;
         UsbManager usbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
 
-        Log.i("App-Serial", "connect( )  start...   @MainActivity.java  , usbManager : " +usbManager );
+        Log.i(TAG, "connect( )  start...   @UsbSerialService.java  , usbManager : " +usbManager );
         for(UsbDevice v : usbManager.getDeviceList().values())
             if(v.getDeviceId() == deviceId) {
                 device = v;
-                Log.i("App-Serial", "connect( )  if(v.getDeviceId()...   @MainActivity.java  , device : " + device);
+                Log.i(TAG, "connect( )  if(v.getDeviceId()...   @UsbSerialService.java  , device : " + device);
             }
         if(device == null) {
-            Log.i("App-Serial", "connect( )  ..   connection failed: device not found" );
+            Log.i(TAG, "connect( )  ..   connection failed: device not found" );
             return;
         }
         UsbSerialDriver driver = UsbSerialProber.getDefaultProber().probeDevice(device);
@@ -122,15 +128,15 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
             driver = CustomProber.getCustomProber().probeDevice(device);
         }
         if(driver == null) {
-            Log.i("App-Serial", "connect( )  ..   connection failed: no driver for device" );
+            Log.i(TAG, "connect( )  ..   connection failed: no driver for device" );
             return;
         }
         if(driver.getPorts().size() < portNum) {
-            Log.i("App-Serial", "connect( )  ..   connection failed: not enough ports at device" );
+            Log.i(TAG, "connect( )  ..   connection failed: not enough ports at device" );
             return;
         }
         usbSerialPort = driver.getPorts().get(portNum);
-        Log.i("App-Serial", "connect( )  getPorts().get(portNum); ...   @MainActivity.java  , usbSerialPort : " + usbSerialPort);
+        Log.i(TAG, "connect( )  getPorts().get(portNum); ...   @UsbSerialService.java  , usbSerialPort : " + usbSerialPort);
         UsbDeviceConnection usbConnection = usbManager.openDevice(driver.getDevice());
         if(usbConnection == null && usbPermission == UsbPermission.Unknown && !usbManager.hasPermission(driver.getDevice())) {
             usbPermission = UsbPermission.Requested;
@@ -140,28 +146,26 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         }
         if(usbConnection == null) {
             if (!usbManager.hasPermission(driver.getDevice()))
-                Log.i("App-Serial", "connect( )  ..   connection failed: permission denied" );
+                Log.i(TAG, "connect( )  ..   connection failed: permission denied" );
             else
-                Log.i("App-Serial", "connect( )  ..   connection failed: open failed" );
+                Log.i(TAG, "connect( )  ..   connection failed: open failed" );
             return;
         }
 
         try {
             usbSerialPort.open(usbConnection);
-            //baudRate = 115200; //jw
             usbSerialPort.setParameters(baudRate, 8, 1, UsbSerialPort.PARITY_NONE);
 
-            Log.i("App-Serial", "connect( )  usbSerialPort.setParameters() ...   @MainActivity.java  , baudRate : " + baudRate+ ", UsbSerialPort : " + UsbSerialPort.PARITY_NONE );
+            Log.i(TAG, "connect( )  usbSerialPort.setParameters() ...   @UsbSerialService.java  , baudRate : " + baudRate+ ", UsbSerialPort : " + UsbSerialPort.PARITY_NONE );
             if(withIoManager) {
                 usbIoManager = new SerialInputOutputManager(usbSerialPort, this);
                 usbIoManager.start();
             }
-            Log.i("App-Serial", "connect( )  ..   connected!!!" );
+            Log.i(TAG, "connect( )  ..   connected!!!" );
             connected = true;
 
-            send("y,90,100");
         } catch (Exception e) {
-            Log.i("App-Serial", "connect( )  ..   connection failed!!!" );
+            Log.i(TAG, "connect( )  ..   connection failed!!!" );
             disconnect();
         }
     }
@@ -169,15 +173,14 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
 
     @Override
     public void onNewData(byte[] data) {
-        Log.i("App-Serial", "onNewData( )   @MainActivity.java  , data :"  +data);
         mainLooper.post(() -> {
-            receive(data);
+   //         receive(data);
         });
     }
 
     @Override
     public void onRunError(Exception e) {
-        Log.i("App-Serial", "onRunError( )   @MainActivity.java  " );
+        Log.i(TAG, "onRunError( )   @UsbSerialService.java  " );
         mainLooper.post(() -> {
             disconnect();
         });
@@ -187,12 +190,11 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         SpannableStringBuilder spn = new SpannableStringBuilder();
         spn.append("receive " + data.length + " bytes\n");
         if(data.length > 0)  spn.append(HexDump.dumpHexString(data)).append("\n");
-
-        Log.i("App-Serial", "receive( ) ...   @MainActivity.java , spn : " +spn );
+        Log.i(TAG, "receive( ) ...   @UsbSerialService.java , spn : " +spn );
     }
 
     public void disconnect() {
-        Log.i("App-Serial", "disconnect( ) ...   @MainActivity.java  "  );
+        Log.i(TAG, "disconnect( ) ...   @UsbSerialService.java  "  );
         connected = false;
         if(usbIoManager != null) {
             usbIoManager.setListener(null);
@@ -206,6 +208,44 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
     }
 
 
+    public void moveX(double pos) {
+        if (checkUsbSerial()) {
+            moveMotor(true, pos);
+        }
+    }
+    public void moveY(double pos) {
+        if (checkUsbSerial()) {
+            moveMotor(false, pos);
+        }
+    }
+
+    public boolean checkUsbSerial() {
+        if(venderId == 4292)  return  true;
+        else return false;
+    }
+
+    public void moveMotor(boolean x, double pos) {
+        if (checkUsbSerial()) {
+            String cmd = "";
+            if(x) {
+                cmd = "x," + pos +"," + MOTOR_DELAY + "\n";
+                if(pos < MIN_X || pos > MAX_X) {
+                    Log.e(TAG, "X ,Range over");
+                    return;
+                }
+            }
+            else {
+                cmd = "y," + pos +"," + MOTOR_DELAY + "\n";
+                if(pos < MIN_Y || pos > MAX_Y) {
+                    Log.e(TAG, "Y ,Range over");
+                    return;
+                }
+            }
+            Log.e(TAG, "MoveMotor " + (x?"X":"Y") + pos);
+            send(cmd);
+        }
+    }
+
     public void send(String str) {
         if(!connected) {
             Toast.makeText(mContext, "not connected", Toast.LENGTH_SHORT).show();
@@ -213,7 +253,7 @@ public class UsbSerialService  implements SerialInputOutputManager.Listener{
         }
         try {
             byte[] data = (str + '\n').getBytes();
-            Log.i("App-Serial", "send( ) ...   @TerminalFragment.java , data : " +data );
+            Log.i(TAG, "send( ) ...   @UsbSerialService.java , data : " +data );
             usbSerialPort.write(data, WRITE_WAIT_MILLIS);
         } catch (Exception e) {
             onRunError(e);
